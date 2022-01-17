@@ -1,0 +1,31 @@
+
+--- Instructions on how to use the repo ---
+--- Author: Johan Ofverstedt            ---
+
+Run the following command
+First specifying which GPU-devices should be visible: CUDA_VISIBLE_DEVICES=0 (if you use GPU 0)
+The first two paths given as parameters to the script train_comir.py are:
+data path of training set of modality A
+data path of training set of modality B
+Then the next two paths are
+data path of validation set of modality A
+data path of validation set of modality B
+
+Key parameters in the script are:
+logTransformA - Sets if a log transformation of the input images of mod A is performed (useful for some applications)
+logTransformB - Sets if a log transformation of the input images of mod B is performed (useful for some applications)
+
+tau - The temperature of the contrastive loss function. High tau typically gives more binary representations,
+      and low tau gives more nuanced representations (somewhat simplified).
+
+sim_func - The choice of critic. The default should be 'MSE' according to previous studies.
+
+act_l1/act_l2 - Activation decay (regularization)
+
+equivariance - To apply the rotational equivariance trick
+
+patch_sz - The size of the patches to train on
+
+Example:
+CUDA_VISIBLE_DEVICES=0 python3 train_comir.py /.../TrainSet/SHG /.../TrainSet/BF /.../ValidationSet/SHG /.../ValidationSet/BF
+

@@ -9,8 +9,6 @@ import sys
 import random
 import time
 import warnings
-#os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-#os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 # Deep Learning libraries
 import torch
@@ -77,7 +75,7 @@ export_folder = "results" # Add this path to the .gitignore
 # The number of channels in the latent space
 latent_channels = 1
 
-logTransformA = True #True
+logTransformA = False
 logTransformB = False
 
 # Distance function
@@ -95,17 +93,12 @@ simfunctions = {
     "angular"   : lambda x, y: F.cosine_similarity(x, y, dim=1, eps=1e-8).acos().mean() / math.pi,
 }
 sim_func = simfunctions["MSE"]
-#sim_func = simfunctions["MPE15"]
-#sim_func = simfunctions["MSE"]
 # Temperature (tau) of the loss
-tau = 0.5 #0.5
+tau = 0.5
 # L1/L2 activation regularization
 act_l1 = 1e-4 # settings for MSE, MSElong, MSEverylong
-act_l2 = 0.1#1e-4 # settings for MSE, MSElong, MSEverylong
-act_mse = 0.1
-#act_l1 = 0
-#act_l2 = 0 
-# p4 Equivariance (should always be True, unless you want to see how everything breaks visually otherwise)
+act_l2 = 1e-4 # settings for MSE, MSElong, MSEverylong
+# p4 Equivariance
 equivariance = True
 
 # DEEP LEARNING RELATED
@@ -152,6 +145,8 @@ steps_per_epoch = 32*modifier
 steps = steps_per_epoch * epochs
 # How many unique patches are fed during one epoch
 samples_per_epoch = steps_per_epoch * batch_size
+# Specifies the patch size to train on
+patch_sz = 128
 
 num_workers = 4
 # Optimiser
@@ -273,8 +268,6 @@ class MultimodalDataset(Dataset):
             return self.transform(self.images[idx])
         return self.images[idx]
 
-patch_sz = 128
-
 class ImgAugTransform:
     def __init__(self, testing=False):
         if not testing:
@@ -291,12 +284,6 @@ class ImgAugTransform:
                     0.5,
                     iaa.LinearContrast((0.8, 1.0/0.8), per_channel=0.5)),
                 iaa.CropToFixedSize(patch_sz,patch_sz,position='uniform',seed=1337),
-                    #iaa.Sharpen(alpha=(0, 1.0), lightness=(0.75, 1.5))),
-                #iaa.AdditiveGaussianNoise(loc=0, scale=(0.0, 0.05*255), per_channel=0.5),
-                # Make some images brighter and some darker.
-                # In 20% of all cases, we sample the multiplier once per channel,
-                # which can end up changing the color of the images.
-                #iaa.Multiply((0.8, 1.2), per_channel=0.2),                
             ])
         else:
             self.aug = iaa.Sequential([
@@ -478,11 +465,11 @@ def test(obj_func_size):
 
     return loss_test, similarities
 
+obj_func_start = 0
+obj_func_end = patch_sz
+obj_func_sz = patch_sz
 epoch = 0
 for epoch in range(1, epochs+1):
-    obj_func_sz = 92#np.random.randint(low=32, high=128)
-    obj_func_start = patch_sz // 2 - obj_func_sz // 2
-    obj_func_end = obj_func_start + obj_func_sz    
     modelA.train()
     modelB.train()
     train_loss = []
@@ -528,14 +515,7 @@ for epoch in range(1, epochs+1):
         )
 
         loss = softmaxes.mean()
-        
-        pos_losses = torch.empty(batch_size).to(device)
-        for k in range(batch_size):
-            pos_losses[k] = -similarities[k, k + batch_size]
-        fac = 0.0#0.4#0.05 + (epoch/epochs) * 0.4
-        pos_loss = fac * pos_losses.mean()#0.25
-        loss = loss + pos_loss
-        
+
         err = pos_error(similarities)
 
         # Activation regularization
