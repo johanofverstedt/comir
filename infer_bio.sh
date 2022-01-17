@@ -1,0 +1,1 @@
+python3 inference_comir.py ./results/latest.pt /data2/johan/biodata2/TestSet/SHG /data2/johan/biodata2/TestSet/BF /data2/johan/biodata2/TestSetComirs/M1MSE32 /data2/johan/biodata2/TestSetComirs/M2MSE32
